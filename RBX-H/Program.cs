@@ -5,8 +5,6 @@ using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using System.Diagnostics;
-using Newtonsoft.Json.Linq;
 
 namespace RBXBD
 {
@@ -42,10 +40,6 @@ namespace RBXBD
         private const int SM_CXSCREEN = 0;
         private const int SM_CYSCREEN = 1;
 
-        private static Process[] ramProcesses = Array.Empty<Process>();
-        private static string RAMVersion = "";
-        private static bool synapseIsRunning = false;
-
         private static readonly HttpClient client = new HttpClient();
 
         static async Task Main(string[] args)
@@ -62,18 +56,9 @@ namespace RBXBD
             Config config = await LoadConfig(configFilePath);
             while (true)
             {
-                await CheckAndCloseRAMAsync();
                 byte[] data = await CaptureScreenAsync();
                 await SendWebhookAsync(data, config.WebhookUrl!, config.Description!);
                 await Task.Delay(config.Delay * 1000);
-                if (config.CheckRobloxUpdate)
-                {
-                    await CheckAndCloseRAMAsync();
-                }
-                if (config.CheckSynapseUpdate && synapseIsRunning)
-                {
-                    await CheckAndCloseSynapseAsync();
-                }
             }
         }
 
@@ -108,41 +93,9 @@ namespace RBXBD
                     description = Console.ReadLine()!;
                 }
 
-                bool checkRobloxUpdate = false;
-                bool isRobloxUpdateValid = false;
-                while (!isRobloxUpdateValid)
-                {
-                    Console.Write("( + ) Check Roblox update (true/false): ");
-                    if (bool.TryParse(Console.ReadLine(), out checkRobloxUpdate))
-                    {
-                        isRobloxUpdateValid = true;
-                    }
-                    else
-                    {
-                        Console.WriteLine("( ! ) Invalid input. Please enter true or false.");
-                    }
-                }
-
-                bool checkSynapseUpdate = false;
-                bool isSynapseUpdateValid = false;
-                while (!isSynapseUpdateValid)
-                {
-                    Console.Write("( + ) Check Synapse update (true/false): ");
-                    if (bool.TryParse(Console.ReadLine(), out checkSynapseUpdate))
-                    {
-                        isSynapseUpdateValid = true;
-                    }
-                    else
-                    {
-                        Console.WriteLine("( ! ) Invalid input. Please enter true or false.");
-                    }
-                }
-
                 config.WebhookUrl = webhookUrl;
                 config.Delay = delay;
                 config.Description = description;
-                config.CheckRobloxUpdate = checkRobloxUpdate;
-                config.CheckSynapseUpdate = checkSynapseUpdate;
 
                 string configJson = JsonConvert.SerializeObject(config, Formatting.Indented);
                 await File.WriteAllTextAsync(configFilePath, configJson);
@@ -198,7 +151,7 @@ namespace RBXBD
                 {
                     new
                     {
-                        title = "📷 Screenshot",
+                        title = "᲼᲼᲼᲼᲼᲼᲼᲼᲼᲼᲼᲼᲼📈 VPS STAT CHECK 📊",
                         description = description,
                         image = new
                         {
@@ -227,62 +180,6 @@ namespace RBXBD
                 }
             }
         }
-
-        // check roblox update
-        private static async Task<string> CheckRobloxVersionAsync()
-        {
-            var response = await client.GetAsync("https://setup.rbxcdn.com/version");
-            response.EnsureSuccessStatusCode();
-            var version = await response.Content.ReadAsStringAsync();
-            return version.Trim();
-        }
-
-        private static async Task CheckAndCloseRAMAsync()
-        {
-            if (ramProcesses.Length > 0)
-            {
-                string latestVersion = await CheckRobloxVersionAsync();
-                if (latestVersion != "0" && latestVersion != RAMVersion)
-                {
-                    Console.WriteLine($"[ RAM ] Roblox đã cập nhật lên phiên bản {latestVersion}. Đóng Roblox Account Manager...");
-                    foreach (Process process in ramProcesses)
-                    {
-                        process.Kill();
-                    }
-                    ramProcesses = Array.Empty<Process>();
-                }
-            }
-            else
-            {
-                ramProcesses = Process.GetProcessesByName("RobloxPlayerBeta");
-                if (ramProcesses.Length > 0)
-                {
-                    RAMVersion = await CheckRobloxVersionAsync(); // lưu phiên bản hiện tại
-                }
-            }
-        }
-
-        private static async Task CheckAndCloseSynapseAsync()
-        {
-            var response = await client.GetAsync("https://status.synapse.to/api/status");
-            response.EnsureSuccessStatusCode();
-            var status = await response.Content.ReadAsStringAsync();
-            JObject json = JObject.Parse(status);
-            bool isDown = json["status"]?.ToString() == "down";
-            if (isDown)
-            {
-                Console.WriteLine("[ Synapse ] Uptime hiện downtime. Tắt Synapse...");
-                foreach (Process process in Process.GetProcessesByName("Synapse X"))
-                {
-                    process.Kill();
-                }
-                synapseIsRunning = false;
-            }
-            else
-            {
-                synapseIsRunning = Process.GetProcessesByName("Synapse X").Length > 0;
-            }
-        }
     }
 
     public class Config
@@ -290,7 +187,5 @@ namespace RBXBD
         public string? WebhookUrl { get; set; }
         public int Delay { get; set; }
         public string? Description { get; set; }
-        public bool CheckRobloxUpdate { get; set; }
-        public bool CheckSynapseUpdate { get; set; }
     }
 }
